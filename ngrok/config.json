@@ -1,6 +1,6 @@
 {
   "name": "ngrok Client",
-  "version": "2.1.8",
+  "version": "3.9.0",
   "slug": "ngrok",
   "description": "A ngrok client for Hass.io",
   "init": false,
@@ -25,7 +25,7 @@
   "options": {
     "log_level": "info",
     "auth_token": "",
-    "region": "us",
+    "region": "eu",
     "tunnels": [
       {
         "name": "hass",
