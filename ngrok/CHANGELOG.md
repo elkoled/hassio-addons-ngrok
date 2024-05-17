@@ -1,5 +1,10 @@
 ## Changes
 
+### 3.9.0
+
+- Upgraded ngrok client
+- Fixed config script
+
 ### 2.1.8
 
 - Fix S6 error fixes [#12](https://github.com/dy1io/hassio-addons/issues/12)

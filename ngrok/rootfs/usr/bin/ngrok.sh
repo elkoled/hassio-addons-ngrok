@@ -1,47 +1,44 @@
 #!/usr/bin/with-contenv bashio
 set -e
+
 bashio::log.debug "Building ngrok.yml..."
 configPath="/ngrok-config/ngrok.yml"
 mkdir -p /ngrok-config
-echo "log: stdout" > $configPath
-bashio::log.debug "Web interface port: $(bashio::addon.port 4040)"
-if bashio::var.has_value "$(bashio::addon.port 4040)"; then
-  echo "web_addr: 0.0.0.0:$(bashio::addon.port 4040)" >> $configPath
-fi
-if bashio::var.has_value "$(bashio::config 'log_level')"; then
-  echo "log_level: $(bashio::config 'log_level')" >> $configPath
-fi
-if bashio::var.has_value "$(bashio::config 'auth_token')"; then
-  echo "authtoken: $(bashio::config 'auth_token')" >> $configPath
-fi
-if bashio::var.has_value "$(bashio::config 'region')"; then
-  echo "region: $(bashio::config 'region')" >> $configPath
-else
-  echo "No region defined, default region is US."
-fi
-echo "tunnels:" >> $configPath
+
+# Start writing ngrok configuration
+cat <<EOF > $configPath
+version: 2
+log: /var/log/ngrok.log
+log_level: debug
+web_addr: 0.0.0.0:4040
+authtoken: $(bashio::config 'auth_token')
+tunnels:
+EOF
+
+# Iterate through tunnels configuration
 for id in $(bashio::config "tunnels|keys"); do
   name=$(bashio::config "tunnels[${id}].name")
-  echo "  $name:" >> $configPath
   proto=$(bashio::config "tunnels[${id}].proto")
-  if [[ $proto != "null" ]]; then
-    echo "    proto: $proto" >> $configPath
-  fi
   addr=$(bashio::config "tunnels[${id}].addr")
-  if [[ $addr != "null" ]]; then
-    if [[ $addr =~ ^([1-9]|[1-5]?[0-9]{2,4}|6[1-4][0-9]{3}|65[1-4][0-9]{2}|655[1-2][0-9]|6553[1-5])$ ]]; then
-      echo "    addr: 172.30.32.1:$addr" >> $configPath
-    else
-      echo "    addr: $addr" >> $configPath
-    fi
-  fi
+
+  cat <<EOF >> $configPath
+  $name:
+    proto: $proto
+    addr: $addr
+EOF
+
+  # Optional fields
   inspect=$(bashio::config "tunnels[${id}].inspect")
   if [[ $inspect != "null" ]]; then
     echo "    inspect: $inspect" >> $configPath
   fi
-  auth=$(bashio::config "tunnels[${id}].auth")
-  if [[ $auth != "null" ]]; then
-    echo "    auth: $auth" >> $configPath
+  domain=$(bashio::config "tunnels[${id}].domain")
+  if [[ $domain != "null" ]]; then
+    echo "    domain: $domain" >> $configPath
+  fi
+  basic_auth=$(bashio::config "tunnels[${id}].basic_auth")
+  if [[ $basic_auth != "null" ]]; then
+    echo "    basic_auth: [$basic_auth]" >> $configPath
   fi
   host_header=$(bashio::config "tunnels[${id}].host_header")
   if [[ $host_header != "null" ]]; then
@@ -80,6 +77,7 @@ for id in $(bashio::config "tunnels|keys"); do
     echo "    metadata: $metadata" >> $configPath
   fi
 done
+
 configfile=$(cat $configPath)
 bashio::log.debug "Config file: \n${configfile}"
 bashio::log.info "Starting ngrok..."
